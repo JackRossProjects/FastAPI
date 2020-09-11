@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
+from joblib import load
 
 app = FastAPI()
 
@@ -24,9 +25,11 @@ async def root():
     <p>Go to <a href="/docs">/docs</a> for documentation.</p>
     """)
 
+pipeline = load('fakenewsmodel.joblib')
+
 class Story(BaseModel):
   title: str
-  text: str
+
 
 
 @app.post('/predict')
@@ -38,13 +41,16 @@ async def predict(story: Story):
     Naive baseline: Always predicts 'fake'
     """
 
-    # Doesn't do anything with the request body yet,
-    # just verifies we can read it.
+    # verifies we can read request body
     print(story)
     X = pd.DataFrame([dict(story)])
     print(X.to_markdown())
 
+    # use pickled pipeline to predict
+    prediction = pipeline.predict(X)[0]
+    probability = pipeline.predict_proba(X).max()
+
     return {
-        'prediction': 'fake', 
-        'proobability': 0.50
+        'prediction': prediction, 
+        'proobability': probability
     }
